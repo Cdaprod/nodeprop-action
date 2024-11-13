@@ -28,7 +28,7 @@ jobs:
           config-file: '.nodeprop.yml'
           storage-path: 'configs'
 
-     - name: Commit Configuration
+      - name: Commit Configuration
         run: |
           if [[ -n $(git status --porcelain .nodeprop.yml) ]]; then
             git config user.name "github-actions[bot]"
@@ -51,7 +51,6 @@ jobs:
             echo "No changes to commit"
           fi
 
-      # Create or update status check
       - name: Create Status Check
         if: success()
         run: |
