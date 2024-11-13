@@ -1,0 +1,55 @@
+name: 'NodeProp Configuration Generator'
+description: 'Generates and manages content-addressable repository configurations using hash-based identifiers'
+author: 'Cdaprod'
+
+inputs:
+  config-file:
+    description: 'Name of the configuration file to generate'
+    required: false
+    default: '.nodeprop.yml'
+  github-token:
+    description: 'GitHub token for API access'
+    required: true
+  storage-path:
+    description: 'Path to store configurations (if using content-addressable storage)'
+    required: false
+    default: 'configs'
+
+outputs:
+  config-hash:
+    description: 'Hash of the generated configuration'
+  config-path:
+    description: 'Path to the generated configuration file'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.x'
+    
+    - name: Install Dependencies
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq curl
+        pip install pyyaml
+
+    - name: Generate Configuration
+      shell: bash
+      run: ${{ github.action_path }}/scripts/generate_config.py
+      env:
+        CONFIG_FILE_NAME: ${{ inputs.config-file }}
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+        STORAGE_PATH: ${{ inputs.storage-path }}
+
+    - name: Set Outputs
+      shell: bash
+      run: |
+        echo "config-hash=$(cat .nodeprop-hash)" >> $GITHUB_OUTPUT
+        echo "config-path=${{ inputs.config-file }}" >> $GITHUB_OUTPUT
+
+branding:
+  icon: 'package'
+  color: 'blue'
