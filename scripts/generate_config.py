@@ -9,6 +9,10 @@ import urllib.request
 import urllib.error
 import sys
 
+class NoAliasDumper(yaml.SafeDumper):
+    def ignore_aliases(self, data):
+        return True
+
 class ConfigGenerator:
     def __init__(self):
         self.config_file = os.getenv('CONFIG_FILE_NAME', '.nodeprop.yml')
@@ -29,9 +33,6 @@ class ConfigGenerator:
             "forks": 0,
             "issues": 0,
             "license": "No License",
-            "topics": [],
-            "pulls": {"open": 0, "closed": 0},
-            "issues": {"open": 0, "closed": 0},
             "latest_commit": self.get_current_utc()
         }
 
@@ -46,41 +47,20 @@ class ConfigGenerator:
                 "Accept": "application/vnd.github.v3+json"
             }
 
-            # Fetch repository data
             request = urllib.request.Request(repo_url, headers=headers)
             try:
                 with urllib.request.urlopen(request) as response:
                     repo_data = json.loads(response.read().decode())
-            except urllib.error.HTTPError as e:
-                print(f"Warning: Failed to fetch repo data: HTTP {e.code}")
-                return default_metadata
+                    return {
+                        "stars": repo_data.get("stargazers_count", 0),
+                        "forks": repo_data.get("forks_count", 0),
+                        "issues": repo_data.get("open_issues_count", 0),
+                        "license": repo_data.get("license", {}).get("spdx_id", "No License"),
+                        "latest_commit": repo_data.get("updated_at", self.get_current_utc())
+                    }
             except Exception as e:
                 print(f"Warning: Failed to fetch repo data: {str(e)}")
                 return default_metadata
-
-            # Fetch topics
-            topics_url = f"{repo_url}/topics"
-            request = urllib.request.Request(topics_url, headers=headers)
-            try:
-                with urllib.request.urlopen(request) as response:
-                    topics_data = json.loads(response.read().decode())
-            except:
-                topics_data = {"names": []}
-
-            metadata = {
-                "stars": repo_data.get("stargazers_count", 0),
-                "forks": repo_data.get("forks_count", 0),
-                "issues": repo_data.get("open_issues_count", 0),
-                "license": repo_data.get("license", {}).get("spdx_id", "No License"),
-                "topics": topics_data.get("names", []),
-                "pulls": {"open": 0, "closed": 0},
-                "issues": {
-                    "open": repo_data.get("open_issues_count", 0),
-                    "closed": 0
-                },
-                "latest_commit": repo_data.get("updated_at", self.get_current_utc())
-            }
-            return metadata
 
         except Exception as e:
             print(f"Warning: Failed to fetch GitHub metadata: {str(e)}")
@@ -128,15 +108,12 @@ class ConfigGenerator:
                     'description': f"Auto-generated configuration for {self.github_repository}",
                     'owner': self.github_actor,
                     'last_updated': self.get_current_utc(),
-                    'tags': metadata.get('topics', []),
                     'github': {
                         'stars': metadata.get('stars', 0),
                         'forks': metadata.get('forks', 0),
                         'issues': metadata.get('issues', 0),
-                        'pull_requests': metadata.get('pulls', {'open': 0, 'closed': 0}),
                         'latest_commit': metadata.get('latest_commit', ''),
-                        'license': metadata.get('license', 'No License'),
-                        'topics': metadata.get('topics', [])
+                        'license': metadata.get('license', 'No License')
                     },
                     'custom_properties': {
                         'deploy_environment': None,
@@ -163,16 +140,24 @@ class ConfigGenerator:
             # Ensure storage directory exists
             os.makedirs(self.storage_path, exist_ok=True)
 
-            # Generate and store configuration
-            config = self.generate_config()
-            config_hash, config_yaml = self.compute_config_hash(config)
+            # Generate base configuration
+            base_config = self.generate_config()
             
-            # Add hash to config after computing it
-            config['id'] = config_hash
+            # Compute hash
+            config_hash, _ = self.compute_config_hash(base_config)
+            
+            # Create final config with ID at the top
+            final_config = {
+                'id': config_hash,
+                **base_config
+            }
             
             # Write configuration file
             with open(self.config_file, 'w') as f:
-                yaml.dump(config, f, sort_keys=False, default_flow_style=False)
+                yaml.dump(final_config, f, 
+                         sort_keys=False, 
+                         default_flow_style=False, 
+                         Dumper=NoAliasDumper)
             
             # Store hash for GitHub Actions output
             with open('.nodeprop-hash', 'w') as f:
