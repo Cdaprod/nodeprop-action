@@ -6,7 +6,7 @@ status: active
 metadata:
   description: Auto-generated configuration for Cdaprod/nodeprop-action
   owner: Cdaprod
-  last_updated: '2024-11-13T20:32:11Z'
+  last_updated: '2024-11-13T20:34:27Z'
   tags: &id001 []
   github:
     stars: 0
@@ -17,7 +17,7 @@ metadata:
     pull_requests:
       open: 0
       closed: 0
-    latest_commit: '2024-11-13T20:32:10Z'
+    latest_commit: '2024-11-13T20:34:27Z'
     license: No License
     topics: *id001
   custom_properties:
@@ -26,7 +26,7 @@ metadata:
     auto_scale: null
     service: null
     app: nodeprop-action
-    image: Cdaprod/nodeprop-action:202ebba
+    image: Cdaprod/nodeprop-action:f41f1d1
     network: project-domain-namespace
     domain: nodeprop-action.Cdaprod.dev
-id: 614f9ebf44c9161513e210f39c6d829e972a021817854290f5b307ccfa593af2
+id: bc0c91b307e3ec2043c6255a46c0aa99be42547caadb0ca4701048b05490fa45
