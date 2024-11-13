@@ -1,4 +1,7 @@
+
 # NodeProp Configuration Generator Action
+
+[![Generate the NodeProp YAML Configuration File](https://github.com/Cdaprod/nodeprop-action/actions/workflows/generate-nodeprop.yml/badge.svg)](https://github.com/Cdaprod/nodeprop-action/actions/workflows/generate-nodeprop.yml)
 
 This GitHub Action generates and manages content-addressable repository configurations using hash-based identifiers. It analyzes your repository's structure, capabilities, and metadata to create a standardized configuration file.
 
@@ -104,6 +107,35 @@ metadata:
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## 📜 License
 
 MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👥 Connect with Cdaprod
+
+<div align="center">
+  <p>
+    <a href="https://youtube.com/@Cdaprod">
+      <img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube Channel" />
+    </a>
+    <a href="https://twitter.com/cdasmktcda">
+      <img src="https://img.shields.io/badge/Twitter-1DA1F2?style=for-the-badge&logo=twitter&logoColor=white" alt="Twitter Follow" />
+    </a>
+    <a href="https://www.linkedin.com/in/cdasmkt">
+      <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn" />
+    </a>
+    <a href="https://github.com/Cdaprod">
+      <img src="https://img.shields.io/badge/GitHub-100000?style=for-the-badge&logo=github&logoColor=white" alt="GitHub followers" />
+    </a>
+    <a href="https://sanity.cdaprod.dev">
+      <img src="https://img.shields.io/badge/Blog-FF5722?style=for-the-badge&logo=blogger&logoColor=white" alt="Personal Blog" />
+    </a>
+  </p>
+</div>
+
+<div align="center">
+  <p>Built with ❤️ by <a href="https://github.com/Cdaprod">Cdaprod</a></p>
+  <p><em>Making Enterprise Software Awesome!</em></p>
+</div>
