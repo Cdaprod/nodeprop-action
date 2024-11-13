@@ -8,25 +8,38 @@ from datetime import datetime, UTC
 import urllib.request
 import urllib.error
 import sys
+from typing import Dict, Any, Tuple
 
 class NoAliasDumper(yaml.SafeDumper):
+    """Custom YAML dumper that prevents alias creation."""
     def ignore_aliases(self, data):
         return True
 
 class ConfigGenerator:
+    """Generates standardized configuration files for repository properties."""
+    
     def __init__(self):
+        """Initialize the configuration generator with environment variables."""
         self.config_file = os.getenv('CONFIG_FILE_NAME', '.nodeprop.yml')
         self.storage_path = os.getenv('STORAGE_PATH', 'configs')
         self.github_token = os.getenv('GITHUB_TOKEN')
         self.github_repository = os.getenv('GITHUB_REPOSITORY', 'unknown/unknown')
         self.github_sha = os.getenv('GITHUB_SHA', '')
         self.github_actor = os.getenv('GITHUB_ACTOR', 'unknown')
+        
+        # Parse repository information
+        self.repo_owner = self.github_repository.split('/')[0] if '/' in self.github_repository else 'unknown'
+        self.repo_name = self.github_repository.split('/')[1] if '/' in self.github_repository else 'unknown'
+        
+        # Network and domain configuration
+        self.network_namespace = f"{self.repo_owner}-network"
+        self.domain_base = "cdaprod.dev"
 
     def get_current_utc(self) -> str:
         """Get current UTC time in ISO format."""
         return datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
 
-    def fetch_github_metadata(self) -> dict:
+    def fetch_github_metadata(self) -> Dict[str, Any]:
         """Fetch repository metadata from GitHub API."""
         default_metadata = {
             "stars": 0,
@@ -84,7 +97,18 @@ class ConfigGenerator:
         
         return list(set(capabilities))
 
-    def compute_config_hash(self, config_data: dict) -> tuple:
+    def generate_network_identifiers(self) -> Dict[str, str]:
+        """Generate network-related identifiers for the repository."""
+        domain = f"{self.repo_name}.{self.domain_base}"
+        return {
+            'namespace': self.network_namespace,
+            'domain': domain,
+            'service_dns': f"{self.repo_name}.{self.network_namespace}.svc",
+            'cluster_dns': f"{self.repo_name}.{self.network_namespace}.svc.cluster.local",
+            'service_name': self.repo_name
+        }
+
+    def compute_config_hash(self, config_data: Dict) -> Tuple[str, str]:
         """Compute content hash of configuration data."""
         config_yaml = yaml.dump(config_data, sort_keys=True, default_flow_style=False)
         header = f"config {len(config_yaml.encode('utf-8'))}\0"
@@ -92,14 +116,14 @@ class ConfigGenerator:
         config_hash = hashlib.sha256(combined).hexdigest()
         return config_hash, config_yaml
 
-    def generate_config(self) -> dict:
+    def generate_config(self) -> Dict:
         """Generate the complete configuration."""
         try:
-            repo_owner, repo_name = self.github_repository.split('/')
             metadata = self.fetch_github_metadata()
             capabilities = self.detect_capabilities()
+            network_ids = self.generate_network_identifiers()
 
-            config = {
+            base_config = {
                 'name': self.github_repository,
                 'address': f"https://github.com/{self.github_repository}",
                 'capabilities': capabilities,
@@ -120,21 +144,22 @@ class ConfigGenerator:
                         'monitoring_enabled': None,
                         'auto_scale': None,
                         'service': None,
-                        'app': repo_name,
+                        'app': self.repo_name,
                         'image': f"{self.github_repository}:{self.github_sha[:7]}",
-                        'network': "project-domain-namespace",
-                        'domain': f"{repo_name}.{repo_owner}.dev"
+                        'domain': network_ids['domain'],
+                        'network': self.network_namespace,
+                        'networking': network_ids
                     }
                 }
             }
 
-            return config
+            return base_config
 
         except Exception as e:
             print(f"Error in generate_config: {str(e)}")
             raise
 
-    def main(self):
+    def main(self) -> int:
         """Main execution function."""
         try:
             # Ensure storage directory exists
