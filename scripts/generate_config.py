@@ -129,7 +129,7 @@ class ConfigGenerator:
                 'capabilities': capabilities,
                 'status': 'active',
                 'metadata': {
-                    'description': f"Auto-generated configuration for {self.github_repository}",
+                    'description': f"Auto-generated configuration for '{self.github_repository}' in {self.repo_owner} domain.",
                     'owner': self.github_actor,
                     'last_updated': self.get_current_utc(),
                     'github': {
