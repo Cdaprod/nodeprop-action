@@ -4,7 +4,7 @@ import os
 import yaml
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 import urllib.request
 import urllib.error
 import sys
@@ -18,6 +18,10 @@ class ConfigGenerator:
         self.github_sha = os.getenv('GITHUB_SHA', '')
         self.github_actor = os.getenv('GITHUB_ACTOR', 'unknown')
 
+    def get_current_utc(self) -> str:
+        """Get current UTC time in ISO format."""
+        return datetime.now(UTC).strftime('%Y-%m-%dT%H:%M:%SZ')
+
     def fetch_github_metadata(self) -> dict:
         """Fetch repository metadata from GitHub API."""
         default_metadata = {
@@ -28,7 +32,7 @@ class ConfigGenerator:
             "topics": [],
             "pulls": {"open": 0, "closed": 0},
             "issues": {"open": 0, "closed": 0},
-            "latest_commit": datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            "latest_commit": self.get_current_utc()
         }
 
         if not self.github_token:
@@ -44,32 +48,42 @@ class ConfigGenerator:
 
             # Fetch repository data
             request = urllib.request.Request(repo_url, headers=headers)
-            with urllib.request.urlopen(request) as response:
-                repo_data = json.loads(response.read().decode())
+            try:
+                with urllib.request.urlopen(request) as response:
+                    repo_data = json.loads(response.read().decode())
+            except urllib.error.HTTPError as e:
+                print(f"Warning: Failed to fetch repo data: HTTP {e.code}")
+                return default_metadata
+            except Exception as e:
+                print(f"Warning: Failed to fetch repo data: {str(e)}")
+                return default_metadata
 
             # Fetch topics
             topics_url = f"{repo_url}/topics"
             request = urllib.request.Request(topics_url, headers=headers)
-            with urllib.request.urlopen(request) as response:
-                topics_data = json.loads(response.read().decode())
+            try:
+                with urllib.request.urlopen(request) as response:
+                    topics_data = json.loads(response.read().decode())
+            except:
+                topics_data = {"names": []}
 
-            return {
+            metadata = {
                 "stars": repo_data.get("stargazers_count", 0),
                 "forks": repo_data.get("forks_count", 0),
                 "issues": repo_data.get("open_issues_count", 0),
                 "license": repo_data.get("license", {}).get("spdx_id", "No License"),
                 "topics": topics_data.get("names", []),
-                "pulls": {"open": 0, "closed": 0},  # Simplified for now
+                "pulls": {"open": 0, "closed": 0},
                 "issues": {
                     "open": repo_data.get("open_issues_count", 0),
-                    "closed": 0  # Simplified for now
+                    "closed": 0
                 },
-                "latest_commit": repo_data.get("updated_at", 
-                    datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'))
+                "latest_commit": repo_data.get("updated_at", self.get_current_utc())
             }
+            return metadata
 
         except Exception as e:
-            print(f"Warning: Failed to fetch GitHub metadata: {e}")
+            print(f"Warning: Failed to fetch GitHub metadata: {str(e)}")
             return default_metadata
 
     def detect_capabilities(self) -> list:
@@ -88,7 +102,7 @@ class ConfigGenerator:
             if os.path.exists(file_path):
                 capabilities.append(capability)
         
-        return list(set(capabilities))  # Remove duplicates
+        return list(set(capabilities))
 
     def compute_config_hash(self, config_data: dict) -> tuple:
         """Compute content hash of configuration data."""
@@ -113,7 +127,7 @@ class ConfigGenerator:
                 'metadata': {
                     'description': f"Auto-generated configuration for {self.github_repository}",
                     'owner': self.github_actor,
-                    'last_updated': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ'),
+                    'last_updated': self.get_current_utc(),
                     'tags': metadata.get('topics', []),
                     'github': {
                         'stars': metadata.get('stars', 0),
