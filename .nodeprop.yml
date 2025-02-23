@@ -1,4 +1,4 @@
-id: f83ac0ad21d2f53cdaa38707b10c964e07ef958205894bb19a76594f4b791ff4
+id: 102d365259573a7ed10770cb018de7df414cd22cabe13e860958902397ad0145
 name: Cdaprod/nodeprop-action
 address: https://github.com/Cdaprod/nodeprop-action
 capabilities:
@@ -8,12 +8,12 @@ metadata:
   description: Auto-generated configuration for 'Cdaprod/nodeprop-action' in Cdaprod
     domain.
   owner: Cdaprod
-  last_updated: '2025-02-22T00:21:05Z'
+  last_updated: '2025-02-23T00:23:46Z'
   github:
     stars: 0
     forks: 0
     issues: 0
-    latest_commit: '2025-02-22T00:21:05Z'
+    latest_commit: '2025-02-23T00:23:46Z'
     license: No License
   custom_properties:
     deploy_environment: null
@@ -21,7 +21,7 @@ metadata:
     auto_scale: null
     service: null
     app: nodeprop-action
-    image: Cdaprod/nodeprop-action:cff3707
+    image: Cdaprod/nodeprop-action:3e639c9
     domain: nodeprop-action.cdaprod.dev
     network: Cdaprod-network
     networking:
