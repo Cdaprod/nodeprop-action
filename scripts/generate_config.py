@@ -53,31 +53,70 @@ class ConfigGenerator:
             print("Warning: GITHUB_TOKEN not set")
             return default_metadata
 
-        try:
-            repo_url = f"https://api.github.com/repos/{self.github_repository}"
-            headers = {
-                "Authorization": f"token {self.github_token}",
-                "Accept": "application/vnd.github.v3+json"
+        repo_url = f"https://api.github.com/repos/{self.github_repository}"
+        headers = {
+            "Authorization": f"token {self.github_token}",
+            "Accept": "application/vnd.github.v3+json"
+        }
+
+        request = urllib.request.Request(repo_url, headers=headers)
+        with urllib.request.urlopen(request) as response:
+            repo_data = json.loads(response.read().decode())
+
+            # ─── New: Fetch topics ───────────────────────────────────────────
+            topics = []
+            try:
+                topic_req = urllib.request.Request(
+                    f"{repo_url}/topics",
+                    headers={
+                        "Authorization": f"token {self.github_token}",
+                        "Accept": "application/vnd.github.mercy-preview+json"
+                    }
+                )
+                with urllib.request.urlopen(topic_req) as t_resp:
+                    topics = json.loads(t_resp.read().decode()).get("names", [])
+            except Exception as e:
+                print(f"Warning: Failed to fetch topics: {e}")
+
+            return {
+                "stars": repo_data.get("stargazers_count", 0),
+                "forks": repo_data.get("forks_count", 0),
+                "issues": repo_data.get("open_issues_count", 0),
+                "license": repo_data.get("license", {}).get("spdx_id", "No License"),
+                "latest_commit": repo_data.get("pushed_at", self.get_current_utc()),
+                "topics": topics,                          # ← new
+                "default_branch": repo_data.get("default_branch", "main")  # ← new
             }
 
-            request = urllib.request.Request(repo_url, headers=headers)
-            try:
-                with urllib.request.urlopen(request) as response:
-                    repo_data = json.loads(response.read().decode())
-                    return {
-                        "stars": repo_data.get("stargazers_count", 0),
-                        "forks": repo_data.get("forks_count", 0),
-                        "issues": repo_data.get("open_issues_count", 0),
-                        "license": repo_data.get("license", {}).get("spdx_id", "No License"),
-                        "latest_commit": repo_data.get("updated_at", self.get_current_utc())
-                    }
-            except Exception as e:
-                print(f"Warning: Failed to fetch repo data: {str(e)}")
+            if not self.github_token:
+                print("Warning: GITHUB_TOKEN not set")
                 return default_metadata
 
-        except Exception as e:
-            print(f"Warning: Failed to fetch GitHub metadata: {str(e)}")
-            return default_metadata
+            try:
+                repo_url = f"https://api.github.com/repos/{self.github_repository}"
+                headers = {
+                    "Authorization": f"token {self.github_token}",
+                    "Accept": "application/vnd.github.v3+json"
+                }
+
+                request = urllib.request.Request(repo_url, headers=headers)
+                try:
+                    with urllib.request.urlopen(request) as response:
+                        repo_data = json.loads(response.read().decode())
+                        return {
+                            "stars": repo_data.get("stargazers_count", 0),
+                            "forks": repo_data.get("forks_count", 0),
+                            "issues": repo_data.get("open_issues_count", 0),
+                            "license": repo_data.get("license", {}).get("spdx_id", "No License"),
+                            "latest_commit": repo_data.get("updated_at", self.get_current_utc())
+                        }
+                except Exception as e:
+                    print(f"Warning: Failed to fetch repo data: {str(e)}")
+                    return default_metadata
+
+            except Exception as e:
+                print(f"Warning: Failed to fetch GitHub metadata: {str(e)}")
+                return default_metadata
 
     def detect_capabilities(self) -> list:
         """Detect repository capabilities based on file presence."""
@@ -138,6 +177,8 @@ class ConfigGenerator:
                         'issues': metadata.get('issues', 0),
                         'latest_commit': metadata.get('latest_commit', ''),
                         'license': metadata.get('license', 'No License')
+                        'topics': metadata.get('topics', []),
+                        'default_branch': metadata.get('default_branch', 'main')
                     },
                     'custom_properties': {
                         'deploy_environment': None,
@@ -187,6 +228,18 @@ class ConfigGenerator:
             # Store hash for GitHub Actions output
             with open('.nodeprop-hash', 'w') as f:
                 f.write(config_hash)
+
+            # ─── New: Write hashed snapshot into storage_path ────────────────
+            hashed_file = os.path.join(self.storage_path, f"{config_hash}.yml")
+            with open(hashed_file, 'w') as f:
+                yaml.dump(final_config, f,
+                          sort_keys=False,
+                          default_flow_style=False,
+                          Dumper=NoAliasDumper)
+
+            # ─── New: Ensure .gitkeep exists if storage_path was empty ──────
+            if not any(os.scandir(self.storage_path)):
+                open(os.path.join(self.storage_path, '.gitkeep'), 'a').close()
 
             print(f"Successfully generated configuration with hash: {config_hash}")
             return 0
