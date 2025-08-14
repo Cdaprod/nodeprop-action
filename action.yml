@@ -14,6 +14,10 @@ inputs:
     description: 'Path to store configurations (if using content-addressable storage)'
     required: false
     default: 'configs'
+  spec-file:
+    description: 'Path to YAML file with additional NodeProp fields'
+    required: false
+    default: ''
 
 outputs:
   config-hash:
@@ -47,6 +51,7 @@ runs:
         CONFIG_FILE_NAME: ${{ inputs.config-file }}
         GITHUB_TOKEN: ${{ inputs.github-token }}
         STORAGE_PATH: ${{ inputs.storage-path }}
+        SPEC_FILE_PATH: ${{ inputs.spec-file }}
 
     - name: Set Outputs
       shell: bash
