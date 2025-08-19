@@ -40,6 +40,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           config-file: '.nodeprop.yml'  # Optional: defaults to .nodeprop.yml
           storage-path: 'configs'        # Optional: path for content-addressable storage
+          spec-file: '.nodeprop.extra.yml'  # Optional: merge additional fields
 ```
 
 ## Inputs
@@ -49,6 +50,7 @@ jobs:
 | `github-token` | GitHub token for API access | Yes | N/A |
 | `config-file` | Name of the configuration file to generate | No | `.nodeprop.yml` |
 | `storage-path` | Path to store configurations | No | `configs` |
+| `spec-file` | Path to YAML file with extra NodeProp fields | No | `''` |
 
 ## Outputs
 

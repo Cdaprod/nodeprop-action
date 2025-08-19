@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+"""Generate NodeProp configuration files.
+
+Example:
+    CONFIG_FILE_NAME=.nodeprop.yml python scripts/generate_config.py
+"""
 
 import os
 import yaml
@@ -26,6 +31,7 @@ class ConfigGenerator:
         self.github_repository = os.getenv('GITHUB_REPOSITORY', 'unknown/unknown')
         self.github_sha = os.getenv('GITHUB_SHA', '')
         self.github_actor = os.getenv('GITHUB_ACTOR', 'unknown')
+        self.spec_file = os.getenv('SPEC_FILE_PATH')
         
         # Parse repository information
         self.repo_owner = self.github_repository.split('/')[0] if '/' in self.github_repository else 'unknown'
@@ -84,39 +90,9 @@ class ConfigGenerator:
                 "issues": repo_data.get("open_issues_count", 0),
                 "license": repo_data.get("license", {}).get("spdx_id", "No License"),
                 "latest_commit": repo_data.get("pushed_at", self.get_current_utc()),
-                "topics": topics,                          # ← new
-                "default_branch": repo_data.get("default_branch", "main")  # ← new
+                "topics": topics,
+                "default_branch": repo_data.get("default_branch", "main")
             }
-
-            if not self.github_token:
-                print("Warning: GITHUB_TOKEN not set")
-                return default_metadata
-
-            try:
-                repo_url = f"https://api.github.com/repos/{self.github_repository}"
-                headers = {
-                    "Authorization": f"token {self.github_token}",
-                    "Accept": "application/vnd.github.v3+json"
-                }
-
-                request = urllib.request.Request(repo_url, headers=headers)
-                try:
-                    with urllib.request.urlopen(request) as response:
-                        repo_data = json.loads(response.read().decode())
-                        return {
-                            "stars": repo_data.get("stargazers_count", 0),
-                            "forks": repo_data.get("forks_count", 0),
-                            "issues": repo_data.get("open_issues_count", 0),
-                            "license": repo_data.get("license", {}).get("spdx_id", "No License"),
-                            "latest_commit": repo_data.get("updated_at", self.get_current_utc())
-                        }
-                except Exception as e:
-                    print(f"Warning: Failed to fetch repo data: {str(e)}")
-                    return default_metadata
-
-            except Exception as e:
-                print(f"Warning: Failed to fetch GitHub metadata: {str(e)}")
-                return default_metadata
 
     def detect_capabilities(self) -> list:
         """Detect repository capabilities based on file presence."""
@@ -155,6 +131,21 @@ class ConfigGenerator:
         config_hash = hashlib.sha256(combined).hexdigest()
         return config_hash, config_yaml
 
+    @staticmethod
+    def deep_merge(base: Dict[str, Any], extra: Dict[str, Any]) -> Dict[str, Any]:
+        """Recursively merge ``extra`` into ``base``.
+
+        Example:
+            >>> ConfigGenerator.deep_merge({'a':1}, {'b':2})
+            {'a':1, 'b':2}
+        """
+        for key, value in extra.items():
+            if key in base and isinstance(base[key], dict) and isinstance(value, dict):
+                ConfigGenerator.deep_merge(base[key], value)
+            else:
+                base[key] = value
+        return base
+
     def generate_config(self) -> Dict:
         """Generate the complete configuration."""
         try:
@@ -176,7 +167,7 @@ class ConfigGenerator:
                         'forks': metadata.get('forks', 0),
                         'issues': metadata.get('issues', 0),
                         'latest_commit': metadata.get('latest_commit', ''),
-                        'license': metadata.get('license', 'No License')
+                        'license': metadata.get('license', 'No License'),
                         'topics': metadata.get('topics', []),
                         'default_branch': metadata.get('default_branch', 'main')
                     },
@@ -193,6 +184,10 @@ class ConfigGenerator:
                     }
                 }
             }
+            if self.spec_file and os.path.isfile(self.spec_file):
+                with open(self.spec_file) as f:
+                    spec_data = yaml.safe_load(f) or {}
+                base_config = self.deep_merge(base_config, spec_data)
 
             return base_config
 
